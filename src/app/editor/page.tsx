@@ -1,13 +1,13 @@
 "use client";
 import RichTextEditor from "@/components/editor";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { JSONContent } from "@tiptap/core";
 
-export default function Home() {
+function EditorClient() {
   const [post, setPost] = useState<JSONContent | string>("");
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -170,5 +170,13 @@ export default function Home() {
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="max-w-3xl mx-auto py-8">Loading…</div>}>
+      <EditorClient />
+    </Suspense>
   );
 }

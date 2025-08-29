@@ -23,14 +23,15 @@ export default function DashboardPage() {
     if (typeof content === "string") return content;
     if (!content || typeof content !== "object") return "";
     try {
+      type JSONNode = { type?: string; text?: string; content?: unknown[] };
       const root = content as { type?: string; content?: unknown[] };
-      const gather = (node: any): string => {
+      const gather = (node: unknown): string => {
         if (!node) return "";
         if (typeof node === "string") return node;
         if (Array.isArray(node)) return node.map(gather).join(" ");
-        if (node.type === "text" && typeof node.text === "string")
-          return node.text;
-        if (node.content) return gather(node.content);
+        const n = node as JSONNode;
+        if (n.type === "text" && typeof n.text === "string") return n.text;
+        if (n.content) return gather(n.content);
         return "";
       };
       return gather(root).trim();

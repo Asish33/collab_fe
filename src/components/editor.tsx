@@ -52,7 +52,9 @@ export default function RichTextEditor({
     if (content === undefined || content === null) return;
     try {
       // Set content when prop changes (supports JSON or HTML/string)
-      editor.commands.setContent(content as any, { emitUpdate: false });
+      editor.commands.setContent(content as JSONContent | string, {
+        emitUpdate: false,
+      });
     } catch {
       // noop: if invalid content, ignore to avoid breaking editor
     }
