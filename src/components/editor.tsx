@@ -6,10 +6,11 @@ import React from "react";
 import MenuBar from "./menu-bar";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
+import type { JSONContent } from "@tiptap/core";
 
 interface RichTextEditorProps {
-  content: string;
-  onChange: (content: string) => void;
+  content: JSONContent | string;
+  onChange: (content: JSONContent) => void;
 }
 export default function RichTextEditor({
   content,
@@ -41,11 +42,21 @@ export default function RichTextEditor({
       },
     },
     onUpdate: ({ editor }) => {
-      // console.log(editor.getHTML());
-      onChange(editor.getHTML());
+      onChange(editor.getJSON());
     },
     immediatelyRender: false,
   });
+
+  React.useEffect(() => {
+    if (!editor) return;
+    if (content === undefined || content === null) return;
+    try {
+      // Set content when prop changes (supports JSON or HTML/string)
+      editor.commands.setContent(content as any, { emitUpdate: false });
+    } catch {
+      // noop: if invalid content, ignore to avoid breaking editor
+    }
+  }, [editor, content]);
 
   return (
     <div>
