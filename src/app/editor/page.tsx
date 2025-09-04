@@ -24,12 +24,15 @@ function EditorClient() {
       if (!session?.idToken) return;
       setError(null);
       try {
-        const res = await fetch(`http://localhost:5000/note/${noteId}`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${session.idToken}`,
-          },
-        });
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/${noteId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session.idToken}`,
+            },
+          }
+        );
         if (!res.ok) {
           throw new Error(`Failed to load note (${res.status})`);
         }
@@ -62,17 +65,20 @@ function EditorClient() {
     setError(null);
     try {
       const randomTitle = `Untitled Note ${new Date().toLocaleString()}`;
-      const res = await fetch("http://localhost:5000/note/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.idToken}`,
-        },
-        body: JSON.stringify({
-          title: randomTitle,
-          content: post,
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.idToken}`,
+          },
+          body: JSON.stringify({
+            title: randomTitle,
+            content: post,
+          }),
+        }
+      );
       if (!res.ok) {
         throw new Error(`Failed to create note (${res.status})`);
       }
@@ -94,17 +100,20 @@ function EditorClient() {
     setError(null);
     try {
       const randomTitle = `Updated Note ${new Date().toLocaleString()}`;
-      const res = await fetch(`http://localhost:5000/note/update/${noteId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.idToken}`,
-        },
-        body: JSON.stringify({
-          title: randomTitle,
-          content: post,
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/update/${noteId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.idToken}`,
+          },
+          body: JSON.stringify({
+            title: randomTitle,
+            content: post,
+          }),
+        }
+      );
       if (!res.ok) {
         throw new Error(`Failed to update note (${res.status})`);
       }
@@ -125,12 +134,15 @@ function EditorClient() {
     setDeleting(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:5000/note/delete/${noteId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.idToken}`,
-        },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/delete/${noteId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.idToken}`,
+          },
+        }
+      );
       if (!res.ok) {
         throw new Error(`Failed to delete note (${res.status})`);
       }

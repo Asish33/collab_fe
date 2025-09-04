@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
           ?.id_token;
         if (!idToken) return false;
 
-        await fetch("http://localhost:5000/users/sync", {
+        await fetch(`${process.env.BACKEND_URL}/users/sync`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

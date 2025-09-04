@@ -46,12 +46,15 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("http://localhost:5000/note/getall", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.idToken}`,
-          },
-        });
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/getall`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.idToken}`,
+            },
+          }
+        );
         if (!res.ok) {
           throw new Error(`Failed to load notes (${res.status})`);
         }
