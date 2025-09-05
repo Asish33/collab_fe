@@ -1,22 +1,31 @@
 "use client";
-import RichTextEditor from "@/components/editor";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
+import type { JSONContent } from "@tiptap/core";
+import { useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { io, type Socket } from "socket.io-client";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import type { JSONContent } from "@tiptap/core";
-import { io, type Socket } from "socket.io-client";
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="py-8">Loading…</div>}>
+      <EditorClient />
+    </Suspense>
+  );
+}
 
 function EditorClient() {
-  const [post, setPost] = useState<JSONContent | string>("");
+  const [value, setValue] = useState<JSONContent | string>("");
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const { data: session } = useSession();
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const noteId = useMemo(() => searchParams.get("noteId"), [searchParams]);
   const isCollab = useMemo(
     () => searchParams.get("collab") === "1",
@@ -25,11 +34,15 @@ function EditorClient() {
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
 
+  // Default to light mode when opening the editor route
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   useEffect(() => {
     const fetchNote = async () => {
       if (!noteId) return;
       if (!session?.idToken) return;
-      setError(null);
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/${noteId}`,
@@ -40,20 +53,16 @@ function EditorClient() {
             },
           }
         );
-        if (!res.ok) {
-          throw new Error(`Failed to load note (${res.status})`);
-        }
+        if (!res.ok) return;
         const data = await res.json();
         const content = (data?.note?.content ?? data?.content) as
           | JSONContent
           | string
           | undefined;
         if (content !== undefined) {
-          setPost(content as JSONContent);
+          setValue(content);
         }
-      } catch (e) {
-        setError((e as Error).message);
-      }
+      } catch {}
     };
     fetchNote();
   }, [noteId, session?.idToken]);
@@ -72,7 +81,7 @@ function EditorClient() {
 
     socket.on("noteUpdated", ({ content }: { content: JSONContent }) => {
       applyingRemoteRef.current = true;
-      setPost(content);
+      setValue(content);
       queueMicrotask(() => {
         applyingRemoteRef.current = false;
       });
@@ -85,7 +94,7 @@ function EditorClient() {
   }, [isCollab, noteId]);
 
   const onChange = (content: JSONContent) => {
-    setPost(content);
+    setValue(content);
     if (isCollab && noteId && !applyingRemoteRef.current) {
       socketRef.current?.emit(
         "noteChange",
@@ -113,7 +122,7 @@ function EditorClient() {
           },
           body: JSON.stringify({
             title: randomTitle,
-            content: post,
+            content: value,
           }),
         }
       );
@@ -148,7 +157,7 @@ function EditorClient() {
           },
           body: JSON.stringify({
             title: randomTitle,
-            content: post,
+            content: value,
           }),
         }
       );
@@ -193,9 +202,9 @@ function EditorClient() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <RichTextEditor content={post} onChange={onChange} />
-      <div className="mt-4 flex items-center gap-3">
+    <div>
+      <SimpleEditor value={value} onChange={onChange} />
+      <div className="mt-4 flex items-center gap-3 px-4">
         {!noteId && (
           <Button onClick={onCreate} disabled={submitting}>
             {submitting ? "Saving…" : "Create"}
@@ -220,13 +229,5 @@ function EditorClient() {
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <Suspense fallback={<div className="max-w-3xl mx-auto py-8">Loading…</div>}>
-      <EditorClient />
-    </Suspense>
   );
 }

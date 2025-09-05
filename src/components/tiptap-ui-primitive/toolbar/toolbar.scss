@@ -1,0 +1,72 @@
+:root {
+  --tt-toolbar-height: 2.75rem;
+  --tt-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  /* Map to app theme tokens for consistent visibility */
+  --tt-toolbar-bg-color: var(--background);
+  --tt-toolbar-border-color: var(--border);
+}
+
+.dark {
+  --tt-toolbar-bg-color: var(--background);
+  --tt-toolbar-border-color: var(--border);
+}
+
+.tiptap-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  &-group {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+
+    &:empty {
+      display: none;
+    }
+
+    &:empty + .tiptap-separator,
+    .tiptap-separator + &:empty {
+      display: none;
+    }
+  }
+
+  &[data-variant="fixed"] {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    width: 100%;
+    min-height: var(--tt-toolbar-height);
+    background: var(--tt-toolbar-bg-color);
+    border-bottom: 1px solid var(--tt-toolbar-border-color);
+    padding: 0 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &[data-variant="floating"] {
+    --tt-toolbar-padding: 0.125rem;
+    position: sticky;
+    top: 0.5rem;
+    z-index: 20;
+    width: max-content;
+    margin: 0 auto;
+    border: 1px solid var(--tt-toolbar-border-color);
+    background: color-mix(
+      in oklab,
+      var(--tt-toolbar-bg-color) 92%,
+      transparent
+    );
+    border-radius: 9999px;
+    padding: var(--tt-toolbar-padding);
+    -webkit-backdrop-filter: saturate(180%) blur(8px);
+    backdrop-filter: saturate(180%) blur(8px);
+  }
+}
