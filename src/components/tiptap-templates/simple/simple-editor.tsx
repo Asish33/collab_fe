@@ -79,6 +79,7 @@ import defaultContent from "@/components/tiptap-templates/simple/data/content.js
 type SimpleEditorProps = {
   value?: JSONContent | string;
   onChange?: (content: JSONContent) => void;
+  onEditorReady?: (editor: Editor) => void;
 };
 
 const MainToolbarContent = ({
@@ -189,7 +190,11 @@ const MobileToolbarContent = ({
   </>
 );
 
-export function SimpleEditor({ value, onChange }: SimpleEditorProps) {
+export function SimpleEditor({
+  value,
+  onChange,
+  onEditorReady,
+}: SimpleEditorProps) {
   const isMobile = useIsMobile();
   const { height } = useWindowSize();
   const [mobileView, setMobileView] = React.useState<
@@ -263,6 +268,13 @@ export function SimpleEditor({ value, onChange }: SimpleEditorProps) {
       setMobileView("main");
     }
   }, [isMobile, mobileView]);
+
+  // Notify parent when editor is ready
+  React.useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   return (
     <div className="simple-editor-wrapper">
