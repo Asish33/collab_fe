@@ -202,32 +202,44 @@ function EditorClient() {
   };
 
   return (
-    <div>
-      <SimpleEditor value={value} onChange={onChange} />
-      <div className="mt-4 flex items-center gap-3 px-4">
-        {!noteId && (
-          <Button onClick={onCreate} disabled={submitting}>
-            {submitting ? "Saving…" : "Create"}
-          </Button>
-        )}
-        {noteId && (
-          <>
-            <Button onClick={onUpdate} disabled={updating}>
-              {updating ? "Updating…" : "Update"}
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold truncate">
+            {noteId ? "Edit Note" : "New Note"}
+          </h1>
+          {error && (
+            <p className="text-sm text-red-600 mt-1 truncate" title={error}>
+              {error}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!noteId && (
+            <Button onClick={onCreate} disabled={submitting}>
+              {submitting ? "Saving…" : "Create"}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={onDelete}
-              disabled={deleting}
-              className="gap-2"
-            >
-              {deleting ? "Deleting…" : "Delete"}
-              <Trash2 className="size-4" />
-            </Button>
-          </>
-        )}
-        {error && <span className="text-sm text-red-600">{error}</span>}
+          )}
+          {noteId && (
+            <>
+              <Button onClick={onUpdate} disabled={updating}>
+                {updating ? "Updating…" : "Update"}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={onDelete}
+                disabled={deleting}
+                className="gap-2"
+              >
+                {deleting ? "Deleting…" : "Delete"}
+                <Trash2 className="size-4" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      <SimpleEditor value={value} onChange={onChange} />
     </div>
   );
 }
