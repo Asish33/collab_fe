@@ -1,11 +1,12 @@
 "use client";
 import RichTextEditor from "@/components/editor";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { JSONContent } from "@tiptap/core";
+import { io, type Socket } from "socket.io-client";
 
 function EditorClient() {
   const [post, setPost] = useState<JSONContent | string>("");
@@ -17,6 +18,12 @@ function EditorClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noteId = useMemo(() => searchParams.get("noteId"), [searchParams]);
+  const isCollab = useMemo(
+    () => searchParams.get("collab") === "1",
+    [searchParams]
+  );
+  const socketRef = useRef<Socket | null>(null);
+  const applyingRemoteRef = useRef(false);
 
   useEffect(() => {
     const fetchNote = async () => {
@@ -51,9 +58,40 @@ function EditorClient() {
     fetchNote();
   }, [noteId, session?.idToken]);
 
+  useEffect(() => {
+    if (!isCollab || !noteId) return;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!backendUrl) return;
+
+    const socket = io(backendUrl, { transports: ["websocket", "polling"] });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      socket.emit("joinRoom", String(noteId));
+    });
+
+    socket.on("noteUpdated", ({ content }: { content: JSONContent }) => {
+      applyingRemoteRef.current = true;
+      setPost(content);
+      queueMicrotask(() => {
+        applyingRemoteRef.current = false;
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [isCollab, noteId]);
+
   const onChange = (content: JSONContent) => {
     setPost(content);
-    console.log(content);
+    if (isCollab && noteId && !applyingRemoteRef.current) {
+      socketRef.current?.emit(
+        "noteChange",
+        JSON.stringify({ roomId: String(noteId), content })
+      );
+    }
   };
 
   const onCreate = async () => {

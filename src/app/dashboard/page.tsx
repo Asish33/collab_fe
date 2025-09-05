@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 type Note = {
   id: string;
@@ -18,6 +19,43 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [query, setQuery] = useState<string>("");
+  const router = useRouter();
+
+  const handleCollaborate = async (noteId: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (!session?.idToken) {
+      setError("Please sign in to collaborate.");
+      return;
+    }
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (!backendUrl) {
+        throw new Error("Backend URL not configured");
+      }
+
+      const res = await fetch(`${backendUrl}/collab/join/${noteId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.idToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Collab join error:", res.status, errorText);
+        throw new Error(`Failed to join collab (${res.status}): ${errorText}`);
+      }
+
+      const data = await res.json();
+      const roomId = data?.room ?? noteId;
+      router.push(`/editor?noteId=${encodeURIComponent(roomId)}&collab=1`);
+    } catch (err) {
+      console.error("Collaborate error:", err);
+      setError((err as Error).message);
+    }
+  };
 
   const extractPlainText = (content: unknown): string => {
     if (typeof content === "string") return content;
@@ -153,9 +191,19 @@ export default function DashboardPage() {
                 href={`/editor?noteId=${note.id}`}
                 className="group rounded border p-4 hover:shadow-sm transition block bg-white"
               >
-                <h2 className="font-semibold mb-2 truncate">
-                  {note.title ?? "Untitled"}
-                </h2>
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="font-semibold mb-2 truncate">
+                    {note.title ?? "Untitled"}
+                  </h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => handleCollaborate(note.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition"
+                  >
+                    Collaborate
+                  </Button>
+                </div>
                 {note.content !== undefined && note.content !== null && (
                   <p className="text-sm text-muted-foreground line-clamp-3">
                     {extractPlainText(note.content)}
