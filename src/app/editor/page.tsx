@@ -37,22 +37,19 @@ function EditorClient() {
   const editorRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
 
-  useEffect(() => {
-    document.documentElement.classList.remove("dark");
-  }, []);
+  const [remoteCursors, setRemoteCursors] = useState<
+    { socketId: string; position: number }[]
+  >([]);
 
   useEffect(() => {
     const fetchNote = async () => {
-      if (!noteId) return;
-      if (!session?.idToken) return;
+      if (!noteId || !session?.idToken) return;
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/${noteId}`,
           {
             method: "GET",
-            headers: {
-              Authorization: `Bearer ${session.idToken}`,
-            },
+            headers: { Authorization: `Bearer ${session.idToken}` },
           }
         );
         if (!res.ok) return;
@@ -61,9 +58,7 @@ function EditorClient() {
           | JSONContent
           | string
           | undefined;
-        if (content !== undefined) {
-          setValue(content);
-        }
+        if (content !== undefined) setValue(content);
       } catch {}
     };
     fetchNote();
@@ -81,13 +76,53 @@ function EditorClient() {
       socket.emit("joinRoom", String(noteId));
     });
 
-    socket.on("noteUpdated", ({ content }: { content: JSONContent }) => {
-      applyingRemoteRef.current = true;
-      setValue(content);
-      queueMicrotask(() => {
-        applyingRemoteRef.current = false;
-      });
-    });
+    // Handle content + cursor updates together
+    socket.on(
+      "noteUpdated",
+      ({
+        content,
+        cursorPosition,
+        updatedBy,
+      }: {
+        content: JSONContent;
+        cursorPosition?: number;
+        updatedBy?: string;
+      }) => {
+        applyingRemoteRef.current = true;
+        setValue(content);
+
+        // Update cursor position at the same time as content
+        if (typeof cursorPosition === "number" && updatedBy) {
+          setRemoteCursors((prev) => {
+            const filtered = prev.filter((c) => c.socketId !== updatedBy);
+            return [
+              ...filtered,
+              { socketId: updatedBy, position: cursorPosition },
+            ];
+          });
+        }
+
+        queueMicrotask(() => {
+          applyingRemoteRef.current = false;
+        });
+      }
+    );
+
+    // Handle pure cursor movements (when content doesn't change)
+    socket.on(
+      "textCursorUpdate",
+      ({ position, updatedBy }: { position: number; updatedBy: string }) => {
+        setRemoteCursors((prev) => {
+          const idx = prev.findIndex((c) => c.socketId === updatedBy);
+          if (idx !== -1) {
+            const newArr = [...prev];
+            newArr[idx] = { socketId: updatedBy, position };
+            return newArr;
+          }
+          return [...prev, { socketId: updatedBy, position }];
+        });
+      }
+    );
 
     return () => {
       socket.disconnect();
@@ -95,15 +130,47 @@ function EditorClient() {
     };
   }, [isCollab, noteId]);
 
+  // Updated onChange to send cursor with content
   const onChange = (content: JSONContent) => {
     setValue(content);
-    if (isCollab && noteId && !applyingRemoteRef.current) {
+    if (isCollab && noteId && !applyingRemoteRef.current && editor) {
+      const cursorPosition = editor.state.selection.from;
       socketRef.current?.emit(
         "noteChange",
-        JSON.stringify({ roomId: String(noteId), content })
+        JSON.stringify({
+          roomId: String(noteId),
+          content,
+          cursorPosition, // Send cursor position with content
+        })
       );
     }
   };
+
+  // Updated selectionUpdate handler to only send pure cursor moves
+  useEffect(() => {
+    if (!editor || !isCollab || !noteId) return;
+
+    let lastContentString = JSON.stringify(editor.getJSON());
+
+    const handler = ({ editor }: { editor: Editor }) => {
+      const currentContentString = JSON.stringify(editor.getJSON());
+
+      // Only send cursor updates if content hasn't changed (pure cursor movement)
+      if (currentContentString === lastContentString) {
+        const pos = editor.state.selection.from;
+        socketRef.current?.emit(
+          "textCursorMove",
+          JSON.stringify({ roomId: String(noteId), position: pos })
+        );
+      }
+      lastContentString = currentContentString;
+    };
+
+    editor.on("selectionUpdate", handler);
+    return () => {
+      editor.off("selectionUpdate", handler);
+    };
+  }, [editor, isCollab, noteId]);
 
   useEffect(() => {
     console.log("Editor debug:", {
@@ -111,8 +178,9 @@ function EditorClient() {
       noteId,
       hasSocket: !!socketRef.current,
       hasEditor: !!editor,
+      remoteCursors,
     });
-  }, [isCollab, noteId, editor]);
+  }, [isCollab, noteId, editor, remoteCursors]);
 
   const onCreate = async () => {
     if (!session?.idToken) {
@@ -131,15 +199,10 @@ function EditorClient() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.idToken}`,
           },
-          body: JSON.stringify({
-            title: randomTitle,
-            content: value,
-          }),
+          body: JSON.stringify({ title: randomTitle, content: value }),
         }
       );
-      if (!res.ok) {
-        throw new Error(`Failed to create note (${res.status})`);
-      }
+      if (!res.ok) throw new Error(`Failed to create note (${res.status})`);
       router.push("/dashboard");
     } catch (e) {
       setError((e as Error).message);
@@ -149,8 +212,7 @@ function EditorClient() {
   };
 
   const onUpdate = async () => {
-    if (!noteId) return;
-    if (!session?.idToken) {
+    if (!noteId || !session?.idToken) {
       setError("Please sign in to update notes.");
       return;
     }
@@ -166,15 +228,10 @@ function EditorClient() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.idToken}`,
           },
-          body: JSON.stringify({
-            title: randomTitle,
-            content: value,
-          }),
+          body: JSON.stringify({ title: randomTitle, content: value }),
         }
       );
-      if (!res.ok) {
-        throw new Error(`Failed to update note (${res.status})`);
-      }
+      if (!res.ok) throw new Error(`Failed to update note (${res.status})`);
       router.push("/dashboard");
     } catch (e) {
       setError((e as Error).message);
@@ -184,8 +241,7 @@ function EditorClient() {
   };
 
   const onDelete = async () => {
-    if (!noteId) return;
-    if (!session?.idToken) {
+    if (!noteId || !session?.idToken) {
       setError("Please sign in to delete notes.");
       return;
     }
@@ -196,14 +252,10 @@ function EditorClient() {
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/note/delete/${noteId}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session.idToken}`,
-          },
+          headers: { Authorization: `Bearer ${session.idToken}` },
         }
       );
-      if (!res.ok) {
-        throw new Error(`Failed to delete note (${res.status})`);
-      }
+      if (!res.ok) throw new Error(`Failed to delete note (${res.status})`);
       router.push("/dashboard");
     } catch (e) {
       setError((e as Error).message);
@@ -256,6 +308,48 @@ function EditorClient() {
           onChange={onChange}
           onEditorReady={setEditor}
         />
+        {editor &&
+          remoteCursors.map((cursor) => {
+            if (typeof cursor.position !== "number" || isNaN(cursor.position))
+              return null;
+
+            const docSize = editor.state.doc.content.size;
+            const safePosition = Math.max(
+              0,
+              Math.min(cursor.position, docSize)
+            );
+
+            try {
+              const coords = editor.view?.coordsAtPos(safePosition);
+              if (!coords || !editorRef.current) return null;
+
+              const containerRect = editorRef.current.getBoundingClientRect();
+              const relativeLeft = coords.left - containerRect.left;
+              const relativeTop = coords.top - containerRect.top;
+
+              return (
+                <div
+                  key={cursor.socketId}
+                  style={{
+                    position: "absolute",
+                    left: relativeLeft,
+                    top: relativeTop,
+                    width: 2,
+                    height: 20,
+                    backgroundColor: "red",
+                    pointerEvents: "none",
+                    zIndex: 1000,
+                  }}
+                />
+              );
+            } catch (error) {
+              console.warn(
+                `Error positioning cursor at ${safePosition}:`,
+                error
+              );
+              return null;
+            }
+          })}
       </div>
     </div>
   );
