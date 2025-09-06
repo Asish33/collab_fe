@@ -36,6 +36,7 @@ function EditorClient() {
   const applyingRemoteRef = useRef(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [, forceUpdate] = useState({});
 
   const [remoteCursors, setRemoteCursors] = useState<
     { socketId: string; position: number }[]
@@ -76,7 +77,6 @@ function EditorClient() {
       socket.emit("joinRoom", String(noteId));
     });
 
-    // Handle content + cursor updates together
     socket.on(
       "noteUpdated",
       ({
@@ -91,7 +91,6 @@ function EditorClient() {
         applyingRemoteRef.current = true;
         setValue(content);
 
-        // Update cursor position at the same time as content
         if (typeof cursorPosition === "number" && updatedBy) {
           setRemoteCursors((prev) => {
             const filtered = prev.filter((c) => c.socketId !== updatedBy);
@@ -108,7 +107,6 @@ function EditorClient() {
       }
     );
 
-    // Handle pure cursor movements (when content doesn't change)
     socket.on(
       "textCursorUpdate",
       ({ position, updatedBy }: { position: number; updatedBy: string }) => {
@@ -130,7 +128,6 @@ function EditorClient() {
     };
   }, [isCollab, noteId]);
 
-  // Updated onChange to send cursor with content
   const onChange = (content: JSONContent) => {
     setValue(content);
     if (isCollab && noteId && !applyingRemoteRef.current && editor) {
@@ -140,13 +137,12 @@ function EditorClient() {
         JSON.stringify({
           roomId: String(noteId),
           content,
-          cursorPosition, // Send cursor position with content
+          cursorPosition,
         })
       );
     }
   };
 
-  // Updated selectionUpdate handler to only send pure cursor moves
   useEffect(() => {
     if (!editor || !isCollab || !noteId) return;
 
@@ -155,7 +151,6 @@ function EditorClient() {
     const handler = ({ editor }: { editor: Editor }) => {
       const currentContentString = JSON.stringify(editor.getJSON());
 
-      // Only send cursor updates if content hasn't changed (pure cursor movement)
       if (currentContentString === lastContentString) {
         const pos = editor.state.selection.from;
         socketRef.current?.emit(
@@ -171,6 +166,24 @@ function EditorClient() {
       editor.off("selectionUpdate", handler);
     };
   }, [editor, isCollab, noteId]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      forceUpdate({});
+    };
+
+    const handleScroll = () => {
+      forceUpdate({});
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   useEffect(() => {
     console.log("Editor debug:", {
@@ -302,7 +315,11 @@ function EditorClient() {
         </div>
       </div>
 
-      <div ref={editorRef} className="relative">
+      <div
+        ref={editorRef}
+        className="relative"
+        style={{ position: "relative" }}
+      >
         <SimpleEditor
           value={value}
           onChange={onChange}
@@ -321,9 +338,15 @@ function EditorClient() {
 
             try {
               const coords = editor.view?.coordsAtPos(safePosition);
-              if (!coords || !editorRef.current) return null;
+              if (!coords) return null;
 
-              const containerRect = editorRef.current.getBoundingClientRect();
+              const editorElement = editor.view.dom;
+              if (!editorElement) return null;
+
+              const editorRect = editorElement.getBoundingClientRect();
+              const containerRect = editorRef.current?.getBoundingClientRect();
+              if (!containerRect) return null;
+
               const relativeLeft = coords.left - containerRect.left;
               const relativeTop = coords.top - containerRect.top;
 
