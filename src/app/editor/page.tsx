@@ -432,7 +432,7 @@ function EditorClient() {
         style={{ position: "relative", minHeight: "400px" }}
       >
         <SimpleEditor
-          value={value}
+          value={noteId ? value : undefined}
           onChange={onChange}
           onEditorReady={setEditor}
         />
