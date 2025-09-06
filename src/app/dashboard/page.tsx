@@ -4,6 +4,16 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import {
+  PenTool,
+  Search,
+  Plus,
+  Users,
+  Calendar,
+  FileText,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
 
 type Note = {
   id: string;
@@ -125,105 +135,184 @@ export default function DashboardPage() {
   }, [notes, query]);
 
   if (status === "loading") {
-    return <div className="max-w-4xl mx-auto p-6">Loading session…</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-300 text-lg">Loading session…</p>
+        </div>
+      </div>
+    );
   }
 
   if (!session) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">Your Notes</h1>
-          <Link href="/api/auth/signin">
-            <Button>Sign in</Button>
-          </Link>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-8">
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8">
+            <PenTool className="h-16 w-16 text-blue-400 mx-auto mb-6" />
+            <h1 className="text-2xl font-bold text-white mb-4">
+              Welcome to NoteCollab
+            </h1>
+            <p className="text-slate-300 mb-6">
+              Please sign in to view your notes.
+            </p>
+            <Link href="/api/auth/signin">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl">
+                Sign in
+              </Button>
+            </Link>
+          </div>
         </div>
-        <p>Please sign in to view your notes.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold truncate">Your Notes</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {notes ? `${displayedNotes.length} of ${notes.length} notes` : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search notes…"
-            className="h-9 w-48 sm:w-64 rounded-md border px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200 bg-white"
-          />
-          <Link href="/editor">
-            <Button>Create</Button>
-          </Link>
-        </div>
-      </div>
-
-      {error && <p className="text-red-600 mb-3">{error}</p>}
-
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded border p-4 bg-white animate-pulse">
-              <div className="h-4 w-1/3 bg-slate-200 rounded mb-3" />
-              <div className="h-3 w-full bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-5/6 bg-slate-200 rounded mb-2" />
-              <div className="h-3 w-2/3 bg-slate-200 rounded" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Navigation Header */}
+      <nav className="bg-slate-900/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <PenTool className="h-8 w-8 text-blue-400" />
+              <span className="text-xl font-bold text-white">NoteCollab</span>
             </div>
-          ))}
+            <div className="flex items-center space-x-4">
+              <span className="text-slate-300 text-sm">
+                Welcome back, {session.user?.name || "User"}
+              </span>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(displayedNotes ?? []).length === 0 ? (
-            <p className="col-span-full text-muted-foreground">
-              No notes found.
-            </p>
-          ) : (
-            displayedNotes.map((note) => (
-              <Link
-                key={note.id}
-                href={`/editor?noteId=${note.id}`}
-                className="group rounded border p-4 hover:shadow-sm transition block bg-white"
+      </nav>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-white mb-2">Your Notes</h1>
+              <p className="text-slate-300">
+                {notes
+                  ? `${displayedNotes.length} of ${notes.length} notes`
+                  : "Manage your notes and collaborate with others"}
+              </p>
+            </div>
+            <Link href="/editor">
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <Plus className="mr-2 h-5 w-5" />
+                Create Note
+              </Button>
+            </Link>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search notes…"
+              className="w-full h-12 pl-10 pr-4 bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-900/20 border border-red-500/30 rounded-xl">
+            <p className="text-red-400">{error}</p>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 animate-pulse"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <h2 className="font-semibold mb-2 truncate">
-                    {note.title ?? "Untitled"}
-                  </h2>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => handleCollaborate(note.id, e)}
-                    className="opacity-0 group-hover:opacity-100 transition"
-                  >
-                    Collaborate
-                  </Button>
-                </div>
-                {note.content !== undefined && note.content !== null && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {extractPlainText(note.content)}
-                  </p>
+                <div className="h-5 w-2/3 bg-slate-700 rounded mb-4" />
+                <div className="h-4 w-full bg-slate-700 rounded mb-3" />
+                <div className="h-4 w-5/6 bg-slate-700 rounded mb-3" />
+                <div className="h-4 w-1/2 bg-slate-700 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(displayedNotes ?? []).length === 0 ? (
+              <div className="col-span-full text-center py-16">
+                <FileText className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-slate-300 mb-2">
+                  No notes found
+                </h3>
+                <p className="text-slate-500 mb-6">
+                  {query
+                    ? "Try adjusting your search terms"
+                    : "Get started by creating your first note"}
+                </p>
+                {!query && (
+                  <Link href="/editor">
+                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl">
+                      <Plus className="mr-2 h-5 w-5" />
+                      Create Your First Note
+                    </Button>
+                  </Link>
                 )}
-                {(note.updatedAt || note.createdAt) && (
-                  <div className="mt-3 text-xs text-muted-foreground flex items-center justify-between">
-                    <span>
-                      {note.updatedAt ? "Updated" : "Created"}:{" "}
-                      {note.updatedAt ?? note.createdAt}
-                    </span>
-                    <span className="opacity-0 group-hover:opacity-100 transition text-primary">
-                      Open →
-                    </span>
+              </div>
+            ) : (
+              displayedNotes.map((note) => (
+                <Link
+                  key={note.id}
+                  href={`/editor?noteId=${note.id}`}
+                  className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:bg-slate-800/70 hover:border-slate-600 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <h2 className="font-semibold text-white text-lg truncate group-hover:text-blue-400 transition-colors">
+                      {note.title ?? "Untitled"}
+                    </h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => handleCollaborate(note.id, e)}
+                      className="opacity-0 group-hover:opacity-100 transition-all duration-300 bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:text-white"
+                    >
+                      <Users className="mr-1 h-3 w-3" />
+                      Collaborate
+                    </Button>
                   </div>
-                )}
-              </Link>
-            ))
-          )}
-        </div>
-      )}
+
+                  {note.content !== undefined && note.content !== null && (
+                    <p className="text-slate-300 text-sm line-clamp-3 mb-4">
+                      {extractPlainText(note.content)}
+                    </p>
+                  )}
+
+                  {(note.updatedAt || note.createdAt) && (
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          {note.updatedAt ? "Updated" : "Created"}:{" "}
+                          {new Date(
+                            note.updatedAt ?? note.createdAt ?? ""
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <span className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-blue-400 flex items-center gap-1">
+                        Open
+                        <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                  )}
+                </Link>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

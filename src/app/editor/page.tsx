@@ -1,5 +1,12 @@
 "use client";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 import type { JSONContent } from "@tiptap/core";
 import { useSession } from "next-auth/react";
@@ -15,6 +22,12 @@ export default function Page() {
       <EditorClient />
     </Suspense>
   );
+}
+
+interface RemoteCursor {
+  socketId: string;
+  position: number;
+  lastUpdate: number;
 }
 
 function EditorClient() {
@@ -36,11 +49,20 @@ function EditorClient() {
   const applyingRemoteRef = useRef(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [, forceUpdate] = useState({});
+  const cursorUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [remoteCursors, setRemoteCursors] = useState<
-    { socketId: string; position: number }[]
-  >([]);
+  const [remoteCursors, setRemoteCursors] = useState<RemoteCursor[]>([]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setRemoteCursors((prev) =>
+        prev.filter((cursor) => now - cursor.lastUpdate < 30000)
+      );
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchNote = async () => {
@@ -77,6 +99,10 @@ function EditorClient() {
       socket.emit("joinRoom", String(noteId));
     });
 
+    socket.on("disconnect", () => {
+      setRemoteCursors([]);
+    });
+
     socket.on(
       "noteUpdated",
       ({
@@ -92,11 +118,16 @@ function EditorClient() {
         setValue(content);
 
         if (typeof cursorPosition === "number" && updatedBy) {
+          const now = Date.now();
           setRemoteCursors((prev) => {
             const filtered = prev.filter((c) => c.socketId !== updatedBy);
             return [
               ...filtered,
-              { socketId: updatedBy, position: cursorPosition },
+              {
+                socketId: updatedBy,
+                position: cursorPosition,
+                lastUpdate: now,
+              },
             ];
           });
         }
@@ -110,21 +141,27 @@ function EditorClient() {
     socket.on(
       "textCursorUpdate",
       ({ position, updatedBy }: { position: number; updatedBy: string }) => {
+        const now = Date.now();
         setRemoteCursors((prev) => {
           const idx = prev.findIndex((c) => c.socketId === updatedBy);
           if (idx !== -1) {
             const newArr = [...prev];
-            newArr[idx] = { socketId: updatedBy, position };
+            newArr[idx] = { socketId: updatedBy, position, lastUpdate: now };
             return newArr;
           }
-          return [...prev, { socketId: updatedBy, position }];
+          return [...prev, { socketId: updatedBy, position, lastUpdate: now }];
         });
       }
     );
 
+    socket.on("userDisconnected", ({ socketId }: { socketId: string }) => {
+      setRemoteCursors((prev) => prev.filter((c) => c.socketId !== socketId));
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      setRemoteCursors([]);
     };
   }, [isCollab, noteId]);
 
@@ -143,6 +180,24 @@ function EditorClient() {
     }
   };
 
+  const debouncedCursorUpdate = useCallback(
+    (position: number) => {
+      if (cursorUpdateTimeoutRef.current) {
+        clearTimeout(cursorUpdateTimeoutRef.current);
+      }
+
+      cursorUpdateTimeoutRef.current = setTimeout(() => {
+        if (socketRef.current && noteId) {
+          socketRef.current.emit(
+            "textCursorMove",
+            JSON.stringify({ roomId: String(noteId), position })
+          );
+        }
+      }, 100);
+    },
+    [noteId]
+  );
+
   useEffect(() => {
     if (!editor || !isCollab || !noteId) return;
 
@@ -153,10 +208,7 @@ function EditorClient() {
 
       if (currentContentString === lastContentString) {
         const pos = editor.state.selection.from;
-        socketRef.current?.emit(
-          "textCursorMove",
-          JSON.stringify({ roomId: String(noteId), position: pos })
-        );
+        debouncedCursorUpdate(pos);
       }
       lastContentString = currentContentString;
     };
@@ -164,36 +216,19 @@ function EditorClient() {
     editor.on("selectionUpdate", handler);
     return () => {
       editor.off("selectionUpdate", handler);
+      if (cursorUpdateTimeoutRef.current) {
+        clearTimeout(cursorUpdateTimeoutRef.current);
+      }
     };
-  }, [editor, isCollab, noteId]);
+  }, [editor, isCollab, noteId, debouncedCursorUpdate]);
 
   useEffect(() => {
-    const handleResize = () => {
-      forceUpdate({});
-    };
-
-    const handleScroll = () => {
-      forceUpdate({});
-    };
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", handleScroll);
-
     return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll);
+      if (cursorUpdateTimeoutRef.current) {
+        clearTimeout(cursorUpdateTimeoutRef.current);
+      }
     };
   }, []);
-
-  useEffect(() => {
-    console.log("Editor debug:", {
-      isCollab,
-      noteId,
-      hasSocket: !!socketRef.current,
-      hasEditor: !!editor,
-      remoteCursors,
-    });
-  }, [isCollab, noteId, editor, remoteCursors]);
 
   const onCreate = async () => {
     if (!session?.idToken) {
@@ -277,6 +312,81 @@ function EditorClient() {
     }
   };
 
+  const renderRemoteCursors = () => {
+    if (!editor || !editorRef.current) return null;
+
+    return remoteCursors.map((cursor) => {
+      if (typeof cursor.position !== "number" || isNaN(cursor.position)) {
+        return null;
+      }
+
+      const docSize = editor.state.doc.content.size;
+      const safePosition = Math.max(0, Math.min(cursor.position, docSize));
+
+      try {
+        const coords = editor.view?.coordsAtPos(safePosition);
+        if (!coords) return null;
+
+        const editorElement = editor.view.dom;
+        const containerRect = editorRef.current?.getBoundingClientRect();
+
+        if (!editorElement || !containerRect) return null;
+
+        const scrollLeft =
+          window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollTop =
+          window.pageYOffset || document.documentElement.scrollTop;
+
+        const relativeLeft = coords.left - containerRect.left;
+        const relativeTop = coords.top - containerRect.top;
+
+        const containerHeight = containerRect.height;
+        const containerWidth = containerRect.width;
+
+        if (
+          relativeLeft < 0 ||
+          relativeLeft > containerWidth ||
+          relativeTop < 0 ||
+          relativeTop > containerHeight
+        ) {
+          return null;
+        }
+
+        return (
+          <div
+            key={cursor.socketId}
+            className="absolute pointer-events-none z-50"
+            style={{
+              left: Math.max(0, Math.min(relativeLeft, containerWidth - 2)),
+              top: Math.max(0, Math.min(relativeTop, containerHeight - 20)),
+              width: 2,
+              height: 20,
+              backgroundColor: "#ff4444",
+              borderRadius: "1px",
+              boxShadow: "0 0 2px rgba(255, 68, 68, 0.5)",
+              transform: "translateX(-1px)",
+              transition: "all 0.1s ease-out",
+            }}
+          >
+            <div
+              className="absolute -top-6 left-0 px-1 py-0.5 bg-red-500 text-white text-xs rounded whitespace-nowrap"
+              style={{
+                fontSize: "10px",
+                minWidth: "20px",
+                textAlign: "center",
+              }}
+            >
+              User
+            </div>
+          </div>
+        );
+      } catch (error) {
+        console.warn(`Error positioning cursor at ${safePosition}:`, error);
+        return null;
+      }
+    });
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -287,6 +397,12 @@ function EditorClient() {
           {error && (
             <p className="text-sm text-red-600 mt-1 truncate" title={error}>
               {error}
+            </p>
+          )}
+          {isCollab && (
+            <p className="text-sm text-green-600 mt-1">
+              Collaborative editing enabled • {remoteCursors.length} active user
+              {remoteCursors.length !== 1 ? "s" : ""}
             </p>
           )}
         </div>
@@ -317,62 +433,15 @@ function EditorClient() {
 
       <div
         ref={editorRef}
-        className="relative"
-        style={{ position: "relative" }}
+        className="relative overflow-hidden"
+        style={{ position: "relative", minHeight: "400px" }}
       >
         <SimpleEditor
           value={value}
           onChange={onChange}
           onEditorReady={setEditor}
         />
-        {editor &&
-          remoteCursors.map((cursor) => {
-            if (typeof cursor.position !== "number" || isNaN(cursor.position))
-              return null;
-
-            const docSize = editor.state.doc.content.size;
-            const safePosition = Math.max(
-              0,
-              Math.min(cursor.position, docSize)
-            );
-
-            try {
-              const coords = editor.view?.coordsAtPos(safePosition);
-              if (!coords) return null;
-
-              const editorElement = editor.view.dom;
-              if (!editorElement) return null;
-
-              const editorRect = editorElement.getBoundingClientRect();
-              const containerRect = editorRef.current?.getBoundingClientRect();
-              if (!containerRect) return null;
-
-              const relativeLeft = coords.left - containerRect.left;
-              const relativeTop = coords.top - containerRect.top;
-
-              return (
-                <div
-                  key={cursor.socketId}
-                  style={{
-                    position: "absolute",
-                    left: relativeLeft,
-                    top: relativeTop,
-                    width: 2,
-                    height: 20,
-                    backgroundColor: "red",
-                    pointerEvents: "none",
-                    zIndex: 1000,
-                  }}
-                />
-              );
-            } catch (error) {
-              console.warn(
-                `Error positioning cursor at ${safePosition}:`,
-                error
-              );
-              return null;
-            }
-          })}
+        {renderRemoteCursors()}
       </div>
     </div>
   );
