@@ -7,8 +7,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { TextCursors } from "@/components/text-cursors";
-import { useTextCursorTracking } from "@/hooks/use-text-cursor-tracking";
 import type { Editor } from "@tiptap/react";
 
 export default function Page() {
@@ -106,13 +104,6 @@ function EditorClient() {
       );
     }
   };
-
-  useTextCursorTracking({
-    socket: socketRef.current,
-    isCollab,
-    roomId: noteId || "",
-    editor: editor,
-  });
 
   useEffect(() => {
     console.log("Editor debug:", {
@@ -266,19 +257,6 @@ function EditorClient() {
           onEditorReady={setEditor}
         />
       </div>
-
-      <TextCursors
-        socket={socketRef.current}
-        isCollab={isCollab}
-        roomId={noteId || ""}
-        editor={editor}
-      />
-
-      {isCollab && (
-        <div className="fixed top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded text-sm z-50">
-          Collaboration Mode: {socketRef.current ? "Connected" : "Disconnected"}
-        </div>
-      )}
     </div>
   );
 }
