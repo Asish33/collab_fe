@@ -332,11 +332,6 @@ function EditorClient() {
 
         if (!editorElement || !containerRect) return null;
 
-        const scrollLeft =
-          window.pageXOffset || document.documentElement.scrollLeft;
-        const scrollTop =
-          window.pageYOffset || document.documentElement.scrollTop;
-
         const relativeLeft = coords.left - containerRect.left;
         const relativeTop = coords.top - containerRect.top;
 

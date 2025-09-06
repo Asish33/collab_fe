@@ -17,14 +17,9 @@ import {
   Star,
   Shield,
   Clock,
-  ChevronDown,
   Sparkles,
-  Target,
-  TrendingUp,
   Globe,
   Award,
-  Heart,
-  ThumbsUp,
   Quote,
   Plus,
   Minus,
@@ -33,7 +28,6 @@ import {
 export default function Home() {
   const { status } = useSession();
   const router = useRouter();
-  const [activeFeature, setActiveFeature] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -44,15 +38,6 @@ export default function Home() {
     }
   }, [status, router]);
 
-  // Auto-rotate features
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveFeature((prev: number) => (prev + 1) % features.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Scroll to top functionality and content reveal
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
@@ -103,13 +88,6 @@ export default function Home() {
       description:
         "Organize, search, and manage all your notes in one centralized, intelligent workspace.",
     },
-  ];
-
-  const stats = [
-    { number: "10K+", label: "Active Users" },
-    { number: "50K+", label: "Notes Created" },
-    { number: "99.9%", label: "Uptime" },
-    { number: "24/7", label: "Support" },
   ];
 
   const testimonials = [
@@ -224,7 +202,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Navigation */}
       <nav className="bg-slate-900/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -255,9 +232,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        {/* Animated background elements */}
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -265,7 +240,6 @@ export default function Home() {
         </div>
 
         <div className="max-w-7xl mx-auto text-center relative">
-          {/* Floating badges */}
           <div className="flex justify-center mb-8">
             <div className="inline-flex items-center gap-2 bg-slate-800/80 backdrop-blur-sm border border-slate-600 rounded-full px-4 py-2 text-sm text-slate-300">
               <Sparkles className="h-4 w-4 text-yellow-400" />
@@ -286,7 +260,6 @@ export default function Home() {
             supercharge your learning and productivity.
           </p>
 
-          {/* Enhanced CTA button */}
           <div className="flex justify-center mb-12">
             <Button
               size="lg"
@@ -299,7 +272,6 @@ export default function Home() {
             </Button>
           </div>
 
-          {/* Trust indicators */}
           <div className="flex flex-wrap justify-center items-center gap-8 text-sm text-slate-400">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-blue-400" />
@@ -317,7 +289,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
       <section
         className={`py-20 px-4 sm:px-6 lg:px-8 transition-all duration-1000 ${
           isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
@@ -350,7 +321,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
       <section
         className={`py-20 bg-gradient-to-r from-slate-800 to-slate-700 transition-all duration-1000 delay-200 ${
           isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
@@ -403,7 +373,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How it Works Section */}
       <section className="py-20 bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -451,7 +420,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing Section */}
       <section
         className={`py-20 bg-slate-800 transition-all duration-1000 delay-400 ${
           isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
@@ -463,8 +431,8 @@ export default function Home() {
               Simple, transparent pricing
             </h2>
             <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-              Choose the plan that's right for you. Upgrade or downgrade at any
-              time.
+              Choose the plan that&apos;s right for you. Upgrade or downgrade at
+              any time.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -522,7 +490,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ Section */}
       <section
         className={`py-20 bg-slate-900 transition-all duration-1000 delay-600 ${
           isScrolled ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
@@ -567,7 +534,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-6">
@@ -591,7 +557,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-slate-950 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -654,7 +619,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Scroll to Top Button */}
       {showScrollTop && (
         <button
           onClick={scrollToTop}
