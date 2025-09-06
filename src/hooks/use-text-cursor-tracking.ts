@@ -36,7 +36,7 @@ export function useTextCursorTracking({
         }
       } catch {}
 
-      socket.emit("textCursorMove", JSON.stringify({ roomId, from, to, x, y }));
+      socket.volatile.emit("textCursorMove", JSON.stringify({ roomId, from, to, x, y }));
     };
 
     // Listen for selection changes
