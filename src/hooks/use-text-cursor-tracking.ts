@@ -17,8 +17,6 @@ export function useTextCursorTracking({
   roomId,
   editor,
 }: UseTextCursorTrackingProps) {
-  // Minimal sender: emit on each selection update
-
   useEffect(() => {
     if (!socket || !isCollab || !editor) return;
 
@@ -29,17 +27,26 @@ export function useTextCursorTracking({
       let x: number | undefined;
       let y: number | undefined;
       try {
-        const c = (editor.view as any).coordsAtPos(from, -1);
+        const c = (
+          editor.view as {
+            coordsAtPos: (
+              pos: number,
+              side: number
+            ) => { top: number; left: number } | null;
+          }
+        ).coordsAtPos(from, -1);
         if (c) {
           x = c.left;
           y = c.top;
         }
       } catch {}
 
-      socket.volatile.emit("textCursorMove", JSON.stringify({ roomId, from, to, x, y }));
+      socket.volatile.emit(
+        "textCursorMove",
+        JSON.stringify({ roomId, from, to, x, y })
+      );
     };
 
-    // Listen for selection changes
     editor.on("selectionUpdate", handleSelectionChange);
 
     return () => {

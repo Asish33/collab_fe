@@ -111,7 +111,6 @@ export default function DashboardPage() {
 
   const displayedNotes = useMemo(() => {
     const list = [...(notes ?? [])];
-    // Sort by updatedAt desc then createdAt desc
     list.sort((a, b) => {
       const aTime = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
       const bTime = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();

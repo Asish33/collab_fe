@@ -21,7 +21,6 @@ interface TextCursorsProps {
   editor: Editor | null;
 }
 
-// Generate a consistent color for each user based on their socket ID
 const getColorForUser = (socketId: string): string => {
   const colors = [
     "#FF6B6B",
@@ -42,7 +41,6 @@ const getColorForUser = (socketId: string): string => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Generate a name for each user
 const getNameForUser = (socketId: string): string => {
   return `User ${socketId.slice(-4)}`;
 };
@@ -57,14 +55,13 @@ export function TextCursors({
     new Map()
   );
   const containerRef = useRef<HTMLDivElement>(null);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [, setCurrentUser] = useState<string | null>(null);
 
   useEffect(() => {
     if (!socket || !isCollab || !editor) return;
 
     console.log("Setting up text cursors for room:", roomId);
 
-    // Store current user's socket ID
     if (socket.id) {
       setCurrentUser(socket.id);
       console.log("Current user socket ID:", socket.id);
@@ -78,11 +75,9 @@ export function TextCursors({
       y?: number;
     }) => {
       console.log("Received text cursor update:", data);
-      // Don't show our own cursor. If socket.id is not ready yet, skip.
       if (!socket.id || data.updatedBy === socket.id) return;
 
       try {
-        // If sender provided viewport coords, use them directly (no recompute)
         if (typeof data.x === "number" && typeof data.y === "number") {
           setCursors((prev) => {
             const next = new Map(prev);
@@ -93,22 +88,28 @@ export function TextCursors({
               color: getColorForUser(data.updatedBy),
               name: getNameForUser(data.updatedBy),
               lastUpdate: Date.now(),
-              position: { left: data.x!, top: data.y! } as any,
+              position: { left: data.x!, top: data.y! },
             });
             return next;
           });
           return;
         }
 
-        // Fallback: compute locally with a simple before-side preference
         const size = editor.state.doc.content.size;
         const safeFrom = Math.max(
           1,
           Math.min(Number.isFinite(data.from) ? data.from : 1, size)
         );
-        let coords: any = null;
+        let coords: { top: number; left: number } | null = null;
         try {
-          coords = (editor.view as any).coordsAtPos(safeFrom, -1);
+          coords = (
+            editor.view as {
+              coordsAtPos: (
+                pos: number,
+                side: number
+              ) => { top: number; left: number };
+            }
+          ).coordsAtPos(safeFrom, -1);
         } catch {}
         if (!coords) return;
         setCursors((prev) => {
@@ -143,11 +144,9 @@ export function TextCursors({
     return () => {
       socket.off("textCursorUpdate", handleTextCursorUpdate);
       socket.off("userDisconnected", handleUserDisconnect);
-      // no extra subscriptions retained
     };
   }, [socket, isCollab, roomId, editor]);
 
-  // Clean up cursors that haven't been updated in a while
   useEffect(() => {
     if (!isCollab) return;
 
@@ -156,7 +155,6 @@ export function TextCursors({
       setCursors((prev) => {
         const newCursors = new Map();
         prev.forEach((cursor, socketId) => {
-          // Keep cursor for 3 seconds after last update
           if (now - cursor.lastUpdate < 3000) {
             newCursors.set(socketId, cursor);
           }
@@ -196,7 +194,6 @@ export function TextCursors({
               zIndex: 1000,
             }}
           >
-            {/* Text cursor line */}
             <div
               className="w-0.5 h-5 relative"
               style={{
@@ -204,7 +201,6 @@ export function TextCursors({
                 boxShadow: `0 0 0 1px white`,
               }}
             />
-            {/* User name label */}
             <div
               className="absolute top-6 left-0 px-2 py-1 text-xs font-medium text-white rounded shadow-md"
               style={{

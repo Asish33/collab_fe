@@ -84,13 +84,10 @@ export default function RichTextEditor({
     if (!editor) return;
     if (content === undefined || content === null) return;
     try {
-      // Set content when prop changes (supports JSON or HTML/string)
       editor.commands.setContent(content as JSONContent | string, {
         emitUpdate: false,
       });
-    } catch {
-      // noop: if invalid content, ignore to avoid breaking editor
-    }
+    } catch {}
   }, [editor, content]);
 
   const charCount = editor?.storage.characterCount?.characters() ?? 0;

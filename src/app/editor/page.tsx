@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { TextCursors } from "@/components/text-cursors";
 import { useTextCursorTracking } from "@/hooks/use-text-cursor-tracking";
+import type { Editor } from "@tiptap/react";
 
 export default function Page() {
   return (
@@ -36,9 +37,8 @@ function EditorClient() {
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
   const editorRef = useRef<HTMLDivElement>(null);
-  const [editor, setEditor] = useState<any>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
 
-  // Default to light mode when opening the editor route
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);
@@ -107,7 +107,6 @@ function EditorClient() {
     }
   };
 
-  // Set up text cursor tracking
   useTextCursorTracking({
     socket: socketRef.current,
     isCollab,
@@ -115,7 +114,6 @@ function EditorClient() {
     editor: editor,
   });
 
-  // Debug logging
   useEffect(() => {
     console.log("Editor debug:", {
       isCollab,
@@ -269,7 +267,6 @@ function EditorClient() {
         />
       </div>
 
-      {/* Text cursors overlay */}
       <TextCursors
         socket={socketRef.current}
         isCollab={isCollab}
@@ -277,7 +274,6 @@ function EditorClient() {
         editor={editor}
       />
 
-      {/* Debug indicator */}
       {isCollab && (
         <div className="fixed top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded text-sm z-50">
           Collaboration Mode: {socketRef.current ? "Connected" : "Disconnected"}

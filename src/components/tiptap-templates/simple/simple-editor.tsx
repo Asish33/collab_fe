@@ -3,7 +3,6 @@
 import * as React from "react";
 import { EditorContent, EditorContext, useEditor } from "@tiptap/react";
 
-// --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit";
 import { Image } from "@tiptap/extension-image";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
@@ -14,7 +13,6 @@ import { Subscript } from "@tiptap/extension-subscript";
 import { Superscript } from "@tiptap/extension-superscript";
 import { Selection } from "@tiptap/extensions";
 
-// --- UI Primitives ---
 import { Button } from "@/components/tiptap-ui-primitive/button";
 import { Spacer } from "@/components/tiptap-ui-primitive/spacer";
 import {
@@ -23,7 +21,6 @@ import {
   ToolbarSeparator,
 } from "@/components/tiptap-ui-primitive/toolbar";
 
-// --- Tiptap Node ---
 import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension";
 import { HorizontalRule } from "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node-extension";
 import "@/components/tiptap-node/blockquote-node/blockquote-node.scss";
@@ -34,7 +31,6 @@ import "@/components/tiptap-node/image-node/image-node.scss";
 import "@/components/tiptap-node/heading-node/heading-node.scss";
 import "@/components/tiptap-node/paragraph-node/paragraph-node.scss";
 
-// --- Tiptap UI ---
 import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu";
 import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button";
 import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu";
@@ -54,26 +50,21 @@ import { MarkButton } from "@/components/tiptap-ui/mark-button";
 import { TextAlignButton } from "@/components/tiptap-ui/text-align-button";
 import { UndoRedoButton } from "@/components/tiptap-ui/undo-redo-button";
 
-// --- Icons ---
 import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon";
 import { HighlighterIcon } from "@/components/tiptap-icons/highlighter-icon";
 import { LinkIcon } from "@/components/tiptap-icons/link-icon";
 
-// --- Hooks ---
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { useCursorVisibility } from "@/hooks/use-cursor-visibility";
 
-// --- Components ---
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle";
 
-// --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils";
 
-// --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss";
 
-import type { JSONContent } from "@tiptap/core";
+import type { JSONContent, Editor } from "@tiptap/core";
 import defaultContent from "@/components/tiptap-templates/simple/data/content.json";
 
 type SimpleEditorProps = {
@@ -253,9 +244,7 @@ export function SimpleEditor({
       editor.commands.setContent(value as JSONContent | string, {
         emitUpdate: false,
       });
-    } catch {
-      // ignore invalid content
-    }
+    } catch {}
   }, [editor, value]);
 
   const rect = useCursorVisibility({
@@ -269,7 +258,6 @@ export function SimpleEditor({
     }
   }, [isMobile, mobileView]);
 
-  // Notify parent when editor is ready
   React.useEffect(() => {
     if (editor && onEditorReady) {
       onEditorReady(editor);
